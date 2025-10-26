@@ -1,6 +1,7 @@
-
 // import { MongoClient } from "mongodb";
-// const uri='mongodb+srv://impriya840_db_user:1ZTmljYmG00rVNBy@cluster0.uor5ajb.mongodb.net/'
+// import dotenv from "dotenv";
+// dotenv.config();
+// const uri=process.env.DB_URI
 // async function seed() {
 //   const client = new MongoClient(uri);
 //   await client.connect();
@@ -38,4 +39,3 @@
 //   }
 //   console.log("Files downloaded successfully.\n");
 // };
-
