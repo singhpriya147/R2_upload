@@ -1,6 +1,8 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
+import path from "path";
+import { fileURLToPath } from "url";
 import {
   S3Client,
   PutObjectCommand,
@@ -15,19 +17,23 @@ import { writeFileSync } from "fs";
 dotenv.config();
 const app = express();
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 const uri = process.env.DB_URI;
 const client = new MongoClient(uri);
-await client.connect();
+
+// connect DB
+(async () => {
+  await client.connect();
+  console.log("MongoDB connected");
+})();
+
 const db = client.db("myDatabase");
 console.log("MongoDB connected");
 
-app.use(
-  cors({
-    origin: "http://localhost:5173", // allow Vite dev server
-    methods: ["GET", "POST", "PUT", "DELETE"],
-    allowedHeaders: ["Content-Type"],
-  })
-);
+app.use(cors({ origin: "*" }));
+
 app.use(express.json());
 
 async function testConnection(s3) {
@@ -41,11 +47,10 @@ async function testConnection(s3) {
 let s3 = null;
 // testConnection();
 app.post("/api/get-connect", async (req, res) => {
+  console.log("request body:", req.body);
   try {
     const { r2Accesskey, r2Secretkey, s3Clienturl } = req.body;
-    console.log("Access Key:", r2Accesskey);
-    console.log("Secret Key:", r2Secretkey);
-    console.log("S3 Client URL:", s3Clienturl);
+
     s3 = new S3Client({
       region: "auto",
       endpoint: s3Clienturl,
@@ -66,16 +71,6 @@ app.post("/api/upload-url", async (req, res) => {
   const { filename, contentType, details } = req.body;
 
   const uniqueKey = `uploads/${uuidv4()}-${filename}`;
-
-  // const s3 = new S3Client({
-  //   region: "auto",
-  //   // endpoint: process.env.S3_CLIENT_URL,
-  //   endpoint: s3Clienturl,
-  //   credentials: {
-  //     accessKeyId: r2Accesskey,
-  //     secretAccessKey: r2Secretkey,
-  //   },
-  // });
   testConnection(s3);
   const command = new PutObjectCommand({
     Bucket: process.env.R2_BUCKET,
@@ -110,4 +105,10 @@ app.post("/api/getData", async (req, res) => {
   res.json({ downloadSignedUrl });
 });
 
+//STATIC BUID
+app.use(express.static(path.join(__dirname, "client_build")));
+
+app.get("/*", (req, res) => {
+  res.sendFile(path.join(__dirname, "client_build", "index.html"));
+});
 app.listen(5050, () => console.log("Backend running on http://localhost:5050"));
